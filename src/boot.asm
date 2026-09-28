@@ -40,6 +40,9 @@ boot_start:
 	mov   [bx], al ; store current char into current kb buffer address (bx)
 	mov   si, bx ; store the current char's pos into si (input for puts)
 
+	cmp   al, 8 ; if curr char is backspace, do nothing
+	je    .l
+
 	cmp   al, 13 ; if curr char is new line, stop
 	je    .done
 
@@ -58,7 +61,7 @@ boot_start:
 .msg:
 	db    'Hello, World!', __CR, __NL, 0 ; define byte, then null terminate
 .keyboard:
-	db    __CR, __NL, 'enter 1st 6 chars of your name: ', 0
+	db    __CR, __NL, 'what is your name? ', 0
 .hi:
 	db    __CR, __NL, 'hi queen ', 0
 

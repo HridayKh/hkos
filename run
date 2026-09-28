@@ -9,21 +9,9 @@ echo "==> Preparing build directory..."
 mkdir -p "$BUILD_DIR"
 
 echo "==> Assembling bootloader..."
-nasm "$SRC_DIR/bootloader/boot.asm" -f bin -o "$BUILD_DIR/bootloader.bin"
+nasm "$SRC_DIR/boot.asm" -f bin -o "$BUILD_DIR/bootloader.bin"
 
-echo "==> Assembling kernel..."
-nasm "$SRC_DIR/kernel/main.asm" -f bin -o "$BUILD_DIR/kernel.bin"
+# echo "==> Creating 1.44MB floppy image..."
+# dd if=/dev/zero of="$IMG" bs=512 count=2880 status=none
 
-echo "==> Creating 1.44MB floppy image..."
-dd if=/dev/zero of="$IMG" bs=512 count=2880 status=none
-mkfs.fat -F 12 -n "NBOS" "$IMG" > /dev/null
-
-echo "==> Writing boot sector..."
-dd if="$BUILD_DIR/bootloader.bin" of="$IMG" conv=notrunc status=none
-
-echo "==> Copying kernel to FAT12 image..."
-mcopy -i "$IMG" "$BUILD_DIR/kernel.bin" "::kernel.bin"
-
-echo "==> Build complete: $IMG"
-
-qemu-system-i386 -fda build/main_floppy.img
+qemu-system-i386 -fda $BUILD_DIR/bootloader.bin

@@ -1,7 +1,0 @@
-{
-	"nasm.arch": "x86-64",
-	"clangd.fallbackFlags": [
-		"-Ignu-efi/inc",
-		"-Ignu-efi/inc/x86_64"
-	]
-}

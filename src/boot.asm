@@ -1,71 +1,86 @@
-org 0x7C00
+org 0x7C00 ; available memory: 0x00500 - 0x7FFFF
 bits 16
 
 %define __NL 0x0A ; ascii( \n )
 %define __CR 0x0D ; ascii( \cr )
 %define KEYBOARD_BUFFER 0x7E00 ; right after these 512 bytes
-;---------------------------------------   BOOT   --------------------------------------------
-boot_start:
-	xor   ax, ax ; ax = 0 ; cant write to (ds, es) directly
-	mov   ds, ax ; ds is data segment register, to represent segment part of address of data
-	mov   es, ax ; another data segment register
+boot_start: ;--------------------------------- START -----------------------------------------
+	xor   ax, ax ; ax = 0 ; cant write to (ds, es, ss) directly
+	; note: shouldnt write to CS (code segment) ; cs:ip is current execution address
+	mov   ds, ax ; data segment
+	mov   es, ax ; extra segment
+	mov   ss, ax ; stack segment
+	mov   sp, 0x7C00 ; setup stack pointer ; goes down in memory towards 0x0500 ; ~30kb total
 
-
-	mov   ss, ax ; setup stack
-	mov   sp, 0x7C00 ; goes down in memory
-
-	mov   si, .msg
+	mov   si, .msg_hello_world
 	call  puts
 
-	mov   ax, 0 ; print 0
-	call  putn
-	mov   ax, 34 ; print 34
+	; take in and print ascii of, 1 character
+	mov   si, .msg_enter_a_char_to_see_its_ascii
+	call  puts ; print a message
+
+	mov   cx, 1 ; only take in 1 character
+	mov   si, KEYBOARD_BUFFER ; define the keyboard buffer for input
+	call  text_input_until_counter ; take the input
+
+	mov   si, .msg_new_line ; print a new line
+	call  puts
+
+	mov   ax, [KEYBOARD_BUFFER] ; print the ascii code
 	call  putn
 
-	mov   ah, 0 ; take input
-	int   0x16
+
+	; get and print queens's name
+	mov   si, .msg_what_is_your_name_queen
+	call  puts
+
 	mov   si, KEYBOARD_BUFFER
-	and   ax, 0x00ff
-	call  putn
+	call  text_input_until_enter
 
-
-	mov   si, .keyboard
+	mov   si, .msg_hi_queen
 	call  puts
 
-	mov   bx, KEYBOARD_BUFFER
-.l:
-	mov   ah, 0 ; take input
-	int   0x16
-
-	mov   [bx], al ; store current char into current kb buffer address (bx)
-	mov   si, bx ; store the current char's pos into si (input for puts)
-
-	cmp   al, 8 ; if curr char is backspace, do nothing
-	je    .l
-
-	cmp   al, 13 ; if curr char is new line, stop
-	je    .done
-
-	inc   bx ; increment the bx (location for the next char)
-	mov   byte [bx], 0 ; put 0 in the next char's positon so puts knows to stop ; to be overwritten when next char is input
-	call  puts
-	jmp   .l
-.done:
-	mov   si, .hi
-	call  puts
 	mov   si, KEYBOARD_BUFFER
 	call  puts
 
+
+	; disk reading lets goo!
+	; chs: cylinder, head, sector
+	; lets read the next sector from this one
+	; which disk, which chs address, how many sectors, where to put it
+	mov   ah, 2
+	mov   al, 1
+	mov   ch, 0
+	mov   cl, 2
+	mov   dh, 0
+	mov   dl, 0 ; [diskNum]
+
+	push  ax
+	mov   ax, 0
+	mov   es, ax
+	pop   ax
+
+	mov   bx, 0x7e00
+	int   0x13
+	mov   ah, 0x0e
+	mov   al, [0x7e13]
+	int   0x10
+
+	; halt
 	cli
 	hlt
-.msg:
+.msg_hello_world:
 	db    'Hello, World!', __CR, __NL, 0 ; define byte, then null terminate
-.keyboard:
-	db    __CR, __NL, 'what is your name? ', 0
-.hi:
+.msg_enter_a_char_to_see_its_ascii:
+	db    'Enter a character to see its ASCII code: ', 0
+.msg_what_is_your_name_queen:
+	db    __CR, __NL, 'what is your name, queen? ', 0
+.msg_hi_queen:
 	db    __CR, __NL, 'hi queen ', 0
+.msg_new_line:
+	db    __CR, __NL, 0
 
-;---------------------------------------   PRINTING   ------------------------------------------
+___printing: ;-------------------------------- PRINT -----------------------------------------
 puts: ; prints string to screen until it encounters null
       ; args: ds:si points to string
 	push  si ; source index for string stuff
@@ -92,9 +107,9 @@ putn: ; prints number to screen ; args: ax - num to print
 	push  cx ; base 10 divisor
 	push  dx ; division remainder
 	mov   bx, 2 ; start digit counter at 2 due to \cr \n
-	mov   cl, 0xFFDA ; move \cr\n to stack so they get printed after the number
+	mov   cx, 0xFFDA ; move \cr\n to stack so they get printed after the number
 	push  cx ; moving '\cr'-48 so it becomes `\cr` when 48 is later added
-	mov   cl, 0xFFDD ; same for \n
+	mov   cx, 0xFFDD ; same for \n
 	push  cx
 	mov   cx, 10 ; setup base 10 divisor
 .loop:
@@ -119,7 +134,54 @@ putn: ; prints number to screen ; args: ax - num to print
 	pop   bx
 	pop   ax
 	ret
-;---------------------------------------   BOOT SIGNATURE   ---------------------------------------
-;--- total size 302 bytes when last checked
+
+___input: ;----------------------------------- INPUT -----------------------------------------
+text_input_until_enter: ; takes keyboard input until enter pressed ; args: si - keyboard buffer start
+			; stops on recieve enter ; ignores backsapce
+	push  ax
+	push  si
+.input_loop:
+	mov   ah, 0 ; specify next char function
+	int   0x16 ; interupt code for keyboard input
+
+	cmp   al, 8 ; if curr char is backspace, do nothing
+	je    .input_loop
+	cmp   al, 13 ; if curr char is new line, stop
+	je    .done
+
+	mov   [si], al ; store current char into kb buffer (si)
+	mov   byte [si+1], 0 ; set next char as string null terminator ; to be overwritten when next char is input
+	call  puts ; print current char
+	inc   si ; increment the si (location for the next char)
+
+	jmp   .input_loop
+.done:
+	pop   si
+	pop   ax
+	ret
+text_input_until_counter: ; takes keyboard input until enter pressed ; args: cx - char counter, si - keyboard buffer start
+			  ; doesn't ignore any character
+	push  ax
+	push  cx
+	push  si
+.input_loop:
+	mov   ah, 0 ; specify next char function
+	int   0x16 ; interupt code for keyboard input
+
+	mov   [si], al ; store current char into kb buffer (si)
+	mov   byte [si+1], 0 ; set next char as string null terminator ; to be overwritten when next char is input
+	call  puts ; print current char
+	inc   si ; increment the si (location for the next char)
+	
+	dec   cx ; update the char counter
+	jnz   .input_loop ; continues next chars only if counter is not 0
+.done:
+	pop   si
+	pop   cx
+	pop   ax
+	ret
+___end: ;----------------------------------- BOOT SIGN -----------------------------------------
+;--- total size 307 bytes when last checked
 	times 510-($-$$) db 0 ; 510 - (curr_line - start_of_program) ; db only writes 1 byte
-	dw    0xAA55 ; writes word isntead of 1 byte, equvlent to (db 0x55, 0xAA) ; little endian
+	dw    0xAA55 ; writes word instead of 1 byte, equvlent to (db 0x55, 0xAA) ; little endian
+	times 512 db 'A'

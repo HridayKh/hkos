@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
-set -e # Exit immediately if any command fails
+set -e
 
 SRC_DIR="src"
 BUILD_DIR="build"
 IMG="$BUILD_DIR/main_floppy.img"
 
-echo "==> Preparing build directory..."
 mkdir -p "$BUILD_DIR"
-
-echo "==> Assembling bootloader..."
 nasm "$SRC_DIR/boot.asm" -f bin -o "$BUILD_DIR/bootloader.bin"
 
-# echo "==> Creating 1.44MB floppy image..."
-# dd if=/dev/zero of="$IMG" bs=512 count=2880 status=none
+qemu-system-i386 -drive file=$BUILD_DIR/bootloader.bin,format=raw,index=0,media=disk
 
-qemu-system-i386 -fda $BUILD_DIR/bootloader.bin
+# nasm "src/boot.asm" -f bin -o "build/bootloader.bin"

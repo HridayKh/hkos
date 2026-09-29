@@ -6,9 +6,11 @@ BUILD_DIR="build"
 IMG="$BUILD_DIR/main_floppy.img"
 
 mkdir -p "$BUILD_DIR"
-nasm "$SRC_DIR/boot.asm" -f bin -o "$BUILD_DIR/bootloader.bin"
+# nasm "$SRC_DIR/boot.asm" -f bin -o "$BUILD_DIR/bootloader.bin"
+nasm "$SRC_DIR/boot copy.asm" -f bin -o "$BUILD_DIR/bootloader.bin"
 
-dd if=/dev/zero of=disk.img bs=1M count=1
-dd if=$BUILD_DIR/bootloader.bin of=$BUILD_DIR/disk.img conv=notrunc
+# dd if=/dev/zero of=disk.img bs=1M count=1
+# dd if=$BUILD_DIR/bootloader.bin of=$BUILD_DIR/disk.img conv=notrunc
 
-qemu-system-i386 -drive file=$BUILD_DIR/disk.img,format=raw,index=0,media=disk -nic none
+ls -l build/bootloader.bin
+qemu-system-i386 -drive file=$BUILD_DIR/bootloader.bin,format=raw,index=0,media=disk -nic none

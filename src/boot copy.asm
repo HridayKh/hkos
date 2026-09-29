@@ -26,18 +26,10 @@ boot_start: ;--------------------------------- START ---------------------------
 	mov   si, .msg_hi_queen
 	call  puts
 
-	; mov   ax, 1
-	; mov   si, 2
-	; mov   bx, sector_end
-	
-	; call  read_lba
-
-	; mov   si, sector_end
-	; add   si, 7
-	; call  puts
-	mov   si, KEYBOARD_BUFFER
-	call  text_input_until_enter
-
+	mov   ax, 1 ; lba
+	mov   si, 2 ; num sectors
+	mov   bx, end_sector ; buffer
+	call  read_lba
 
 	; move to 32  bit mode
 	cli
@@ -48,19 +40,12 @@ boot_start: ;--------------------------------- START ---------------------------
 
 	jmp   CODE_SEG:start_protected_mode
 
+	cli
 	hlt
 .msg_hi_queen:
-	db    'hi queen, press enter to move to 32 bit mode', __CR, __LF, 0
+	db    'hi queen', __CR, __LF, 0
 .msg_new_line:
 	db    __CR, __LF, 0
-debug: ;-------------------------------------- DEBUG -----------------------------------------
-	push  si
-	mov   si, .msg
-	call  puts
-	pop   si
-	ret
-.msg:
-	db    'debug', __CR, __LF, 0
 ___printing: ;-------------------------------- PRINT -----------------------------------------
 puts: ; prints string to screen until it encounters null
       ; args: ds:si points to string
@@ -116,7 +101,7 @@ putn: ; prints number to screen ; args: ax - num to print
 	pop   ax
 	ret
 
-___input: ;----------------------------------- INPUT -----------------------------------------
+; ___input: ;----------------------------------- INPUT -----------------------------------------
 text_input_until_enter: ; takes keyboard input until enter pressed ; args: si - keyboard buffer start
 			; stops on recieve enter ; ignores backsapce
 	push  ax
@@ -269,7 +254,6 @@ read_lba: ; read sectors from disk ; args: es:bx = buffer where to store, ax = l
 	
 	mov   di, 3
 	call  lba_to_chs
-
 .attempt:
 	or    di, di
 	jz    .err_done
@@ -287,9 +271,12 @@ read_lba: ; read sectors from disk ; args: es:bx = buffer where to store, ax = l
 	jc    .attempt
 
 .done:
-	mov   ah, 0
-	cmp   si, ax ; check if num of sectors read equals sectors to be read
-	jne   .err_done
+	; mov   ah, 0
+	; cmp   si, ax ; check if num of sectors read equals sectors to be read
+	; call putn
+	; mov ax, si
+	; call putn
+	; jne   .err_done
 
 	pop   di
 	pop   si
@@ -304,13 +291,12 @@ read_lba: ; read sectors from disk ; args: es:bx = buffer where to store, ax = l
 	jmp   .done
 .msg_err:
 	db    'err disk read', __CR, __LF, 0
-___end: ;----------------------------------- BOOT SIGN -----------------------------------------
-;--- total size 476 bytes when last checked
-	times 510-($-$$) db 0 ; 510 - (curr_line - start_of_program) ; db only writes 1 byte
-	dw    0xAA55 ; writes word instead of 1 byte, equvlent to (db 0x55, 0xAA) ; little endian
-sector_end:
-	db    'hello!', 0
 
+
+
+
+
+___end: ;----------------------------------- BOOT SIGN -----------------------------------------
 gdt_start:
 null_descriptor:
 	dd    0, 0
@@ -336,14 +322,28 @@ CODE_SEG equ code_descriptor - gdt_start
 DATA_SEG equ data_descriptor - gdt_start
 ; EQU is used to set constants
 
-
 bits 32
 %define VID 0xB8000
 start_protected_mode:
-	mov   al, 65 ; 65 = 'A'
-	mov   ah, 0x0F ; white on black
-	mov   [VID], ax
+	jmp   mode
+
+;--- total size 476 bytes when last checked
+	times 510-($-$$) db 0 ; 510 - (curr_line - start_of_program) ; db only writes 1 byte
+	dw    0xAA55 ; writes word instead of 1 byte, equvlent to (db 0x55, 0xAA) ; little endian
+end_sector:
+
+mode:
+	mov   ax, DATA_SEG
+	mov   ds, ax
+	mov   es, ax
+	mov   fs, ax
+	mov   gs, ax
+	mov   ss, ax
+	mov   esp, 0x90000 ; Set up a safe 32-bit stack in low RAM
+
+    ; 4. Write 'A' (White on Black) directly to VGA Video Memory
+	mov   byte [0xB8000], 'A'
+	mov   byte [0xB8001], 0x0F
 	cli
 	hlt
-
 

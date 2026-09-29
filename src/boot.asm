@@ -43,28 +43,9 @@ boot_start: ;--------------------------------- START ---------------------------
 	mov   si, KEYBOARD_BUFFER
 	call  puts
 
+	mov   si, .msg_new_line
+	call  puts
 
-	; disk reading lets goo!
-	; chs: cylinder, head, sector
-	; lets read the next sector from this one
-	; which disk, which chs address, how many sectors, where to put it
-	mov   ah, 2
-	mov   al, 1
-	mov   ch, 0
-	mov   cl, 2
-	mov   dh, 0
-	mov   dl, 0 ; [diskNum]
-
-	push  ax
-	mov   ax, 0
-	mov   es, ax
-	pop   ax
-
-	mov   bx, 0x7e00
-	int   0x13
-	mov   ah, 0x0e
-	mov   al, [0x7e13]
-	int   0x10
 
 	; halt
 	cli
@@ -140,6 +121,7 @@ text_input_until_enter: ; takes keyboard input until enter pressed ; args: si - 
 			; stops on recieve enter ; ignores backsapce
 	push  ax
 	push  si
+	mov   byte [si], 0 ; initialise the kb buffer with a null terminator
 .input_loop:
 	mov   ah, 0 ; specify next char function
 	int   0x16 ; interupt code for keyboard input

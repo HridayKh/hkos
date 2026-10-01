@@ -1,16 +1,48 @@
 #!/usr/bin/env bash
 set -e
 
-SRC_DIR="src"
-BUILD_DIR="build"
-IMG="$BUILD_DIR/main_floppy.img"
+# Configuration
+DISK_IMG="build/disk.img"
+BOOTLOADER_BIN="build/bootloader.bin"
+KERNEL_BIN="build/kernel.bin"
 
-mkdir -p "$BUILD_DIR"
-# nasm "$SRC_DIR/boot.asm" -f bin -o "$BUILD_DIR/bootloader.bin"
-nasm "$SRC_DIR/boot.asm" -f bin -o "$BUILD_DIR/bootloader.bin"
+# Clang / LLVM Flags
+CFLAGS="-target i686-unknown-none-elf -ffreestanding -fno-pie -nostdlib -O2 -Wall -Wextra"
 
-# dd if=/dev/zero of=disk.img bs=1M count=1
-# dd if=$BUILD_DIR/bootloader.bin of=$BUILD_DIR/disk.img conv=notrunc
 
-ls -l build/bootloader.bin
-qemu-system-i386 -drive file=$BUILD_DIR/bootloader.bin,format=raw,index=0,media=disk -nic none
+
+echo "[1/5] Preparing build directory..."
+rm -rf "build"
+mkdir -p "build"
+
+
+
+echo "[2/5] Assembling 16-bit Bootloader..."
+nasm -f bin -i src/boot/ src/boot/boot.asm -o "${BOOTLOADER_BIN}"
+
+
+
+echo "[3/5] Compiling C Kernel Source Files..."
+clang ${CFLAGS} -c src/kernel/main.c -o "build/main.o"
+
+
+
+echo "[4/5] Linking Kernel Binary at 0x100000..."
+ld.lld -m elf_i386 -T linker.ld --oformat=binary "build/main.o" -o "${KERNEL_BIN}"
+
+
+
+echo "[5/5] Generating Raw Disk Image..."
+dd if=/dev/zero of="${DISK_IMG}" bs=1M count=10 status=none
+dd if="${BOOTLOADER_BIN}" of="${DISK_IMG}" conv=notrunc status=none
+
+dd if="${KERNEL_BIN}" of="${DISK_IMG}" bs=512 seek=2048 conv=notrunc status=none
+
+
+
+
+echo "[DONE] Starting Qemu..."
+qemu-system-i386 -drive file=${DISK_IMG},format=raw
+
+
+# clang -target i686-unknown-none-elf -ffreestanding -fno-pie -S src/kernel/main.c -O0

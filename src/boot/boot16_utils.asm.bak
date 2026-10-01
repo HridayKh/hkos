@@ -1,0 +1,83 @@
+___printing: ;-------------------------------- PRINT -----------------------------------------
+
+;--------------------------------------------------------------------------------------------------
+putn: ; prints number to screen ; args: ax - num to print
+	push  ax ; division quotient
+	push  bx ; counter of digits
+	push  cx ; base 10 divisor
+	push  dx ; division remainder
+	mov   bx, 2 ; start digit counter at 2 due to \cr \n
+	mov   cx, 0xFFDA ; move \cr\n to stack so they get printed after the number
+	push  cx ; moving '\cr'-48 so it becomes `\cr` when 48 is later added
+	mov   cx, 0xFFDD ; same for \n
+	push  cx
+	mov   cx, 10 ; setup base 10 divisor
+.loop:
+	xor   dx, dx ; dividend high
+	div   cx ; dx:ax / cx = (ax quotient, dx remainder)
+	push  dx ; push digit to stack
+	inc   bx ; update digit counter
+	or    ax, ax ; check if more digits
+	jnz   .loop ; continue loop if more digits left
+.print_loop:
+	pop   ax ; get the digit to print
+	add   al, 48 ; add 48 so digit becomes ascii code
+	mov   ah, 0xE ; bios interupt AH(0xE): write chars in tty mode to screen
+	xor   bh, bh ; interupt param BH = page num (text modes)
+	int   0x10 ; 0x10 is where video driver for bios is
+	dec   bx ; update counter
+	or    bx, bx ; check if more digits left
+	jnz   .print_loop ; do next digit
+.done:
+	pop   dx
+	pop   cx
+	pop   bx
+	pop   ax
+	ret
+
+; ___input: ;----------------------------------- INPUT -----------------------------------------
+text_input_until_enter: ; takes keyboard input until enter pressed ; args: si - keyboard buffer start
+			; stops on recieve enter ; ignores backsapce
+	push  ax
+	push  si
+	mov   byte [si], 0 ; initialise the kb buffer with a null terminator
+.input_loop:
+	mov   ah, 0 ; specify next char function
+	int   0x16 ; interupt code for keyboard input
+
+	cmp   al, 8 ; if curr char is backspace, do nothing
+	je    .input_loop
+	cmp   al, 13 ; if curr char is new line, stop
+	je    .done
+
+	mov   [si], al ; store current char into kb buffer (si)
+	mov   byte [si+1], 0 ; set next char as string null terminator ; to be overwritten when next char is input
+	call  puts ; print current char
+	inc   si ; increment the si (location for the next char)
+
+	jmp   .input_loop
+.done:
+	pop   si
+	pop   ax
+	ret
+text_input_until_counter: ; takes keyboard input until enter pressed ; args: cx - char counter, si - keyboard buffer start
+			  ; doesn't ignore any character
+	push  ax
+	push  cx
+	push  si
+.input_loop:
+	mov   ah, 0 ; specify next char function
+	int   0x16 ; interupt code for keyboard input
+
+	mov   [si], al ; store current char into kb buffer (si)
+	mov   byte [si+1], 0 ; set next char as string null terminator ; to be overwritten when next char is input
+	call  puts ; print current char
+	inc   si ; increment the si (location for the next char)
+	
+	dec   cx ; update the char counter
+	jnz   .input_loop ; continues next chars only if counter is not 0
+.done:
+	pop   si
+	pop   cx
+	pop   ax
+	ret

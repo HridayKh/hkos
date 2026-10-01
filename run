@@ -7,7 +7,7 @@ IMG="$BUILD_DIR/main_floppy.img"
 
 mkdir -p "$BUILD_DIR"
 # nasm "$SRC_DIR/boot.asm" -f bin -o "$BUILD_DIR/bootloader.bin"
-nasm "$SRC_DIR/boot copy.asm" -f bin -o "$BUILD_DIR/bootloader.bin"
+nasm "$SRC_DIR/boot.asm" -f bin -o "$BUILD_DIR/bootloader.bin"
 
 # dd if=/dev/zero of=disk.img bs=1M count=1
 # dd if=$BUILD_DIR/bootloader.bin of=$BUILD_DIR/disk.img conv=notrunc

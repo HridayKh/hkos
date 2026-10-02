@@ -7,7 +7,7 @@ BOOTLOADER_BIN="build/bootloader.bin"
 KERNEL_BIN="build/kernel.bin"
 
 # Clang / LLVM Flags
-CFLAGS="-target i686-unknown-none-elf -ffreestanding -fno-pie -nostdlib -O2 -Wall -Wextra"
+CFLAGS="-target i686-unknown-none-elf -ffreestanding -fno-builtin -fno-pie -nostdlib -O3 -Wall -Wextra"
 
 
 
@@ -23,12 +23,13 @@ nasm -f bin -i src/boot/ src/boot/boot.asm -o "${BOOTLOADER_BIN}"
 
 
 echo "[3/5] Compiling C Kernel Source Files..."
+clang ${CFLAGS} -c src/kernel/memory.c -o "build/memory.o"
 clang ${CFLAGS} -c src/kernel/main.c -o "build/main.o"
 
 
 
 echo "[4/5] Linking Kernel Binary at 0x100000..."
-ld.lld -m elf_i386 -T linker.ld --oformat=binary "build/main.o" -o "${KERNEL_BIN}"
+ld.lld -m elf_i386 -T linker.ld --oformat=binary build/main.o build/memory.o -o "${KERNEL_BIN}"
 
 
 
@@ -45,4 +46,4 @@ echo "[DONE] Starting Qemu..."
 qemu-system-i386 -drive file=${DISK_IMG},format=raw
 
 
-# clang -target i686-unknown-none-elf -ffreestanding -fno-pie -S src/kernel/main.c -O0
+# clang -target i686-unknown-none-elf -fno-builtin -ffreestanding -fno-pie -S src/kernel/main.c -masm=intel

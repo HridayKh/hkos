@@ -33,16 +33,16 @@ boot_start: ;--------------------------------- START ---------------------------
 
 	mov   ah, 6 ; scroll up function
 	mov   al, 0 ; entire window
-	mov   bh, 0x0D ; light magenta on black
+	mov   bh, 0x0f ; white on black
 	mov   cx, 0x0000 ; CH = 0, CL = 0 (upper left corner)
 	mov   dx, 0xffff ; DH = 24, DL = 79 (lower right corner)
 	int   0x10 ; Call BIOS video interrupt
 
-	; mov   ah, 0x02 ; AH = 02h (Set cursor position)
-	; mov   bh, 0x00 ; BH = 0 (Page number)
-	; mov   dh, 0x00 ; DH = 0 (Row)
-	; mov   dl, 0x00 ; DL = 0 (Column)
-	; int   0x10 ; Call BIOS video interrupt
+	mov   ah, 0x02 ; AH = 02h (Set cursor position)
+	mov   bh, 0x00 ; BH = 0 (Page number)
+	mov   dh, 0x00 ; DH = 0 (Row)
+	mov   dl, 0x00 ; DL = 0 (Column)
+	int   0x10 ; Call BIOS video interrupt
 
 	; move to 32  bit mode
 	cli

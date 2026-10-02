@@ -55,9 +55,9 @@ void vgaPrintChar(u8 x, u8 y, u8 charAscii) { // 80x25 chars
 void vgaScroll(void) {
   isize charCount = VGA_WIDTH * (VGA_HEIGHT - 1);
   memmove((void *)vga, (void *)(vga + VGA_WIDTH), charCount * 2);
-  memset((void *)vga + charCount, 0, VGA_WIDTH);
+  memsetw((void *)(vga + charCount), (vgaColorCode << 8) | ' ', VGA_WIDTH);
 }
 
 void vgaFill(u8 charAscii) {
-  memsetw((void *)vga, (charAscii << 8) + vgaColorCode, VGA_WIDTH * VGA_HEIGHT);
+  memsetw((void *)vga, (vgaColorCode << 8) | charAscii, VGA_WIDTH * VGA_HEIGHT);
 }

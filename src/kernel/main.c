@@ -1,7 +1,7 @@
 #define __IN_PROTECTED_MODE__
 
-#include "ints.h"
-#include "io.c"
+#include "io.h"
+#include "vga.h"
 
 void test_printf(void) {
   // -------------------------------------------------------------
@@ -59,11 +59,12 @@ void test_printf(void) {
   //           ]
 }
 __attribute__((section(".text.entry"))) void kernel_main(void) {
-  setColorCode(COLORS.LIGHT_MAGENTA, COLORS.BLACK);
+  setColorCode(VGA_COLOR_LIGHT_MAGENTA, VGA_COLOR_BLACK);
+
   test_printf();
   prints("\r\n");
   test_printf();
-  prints("\nhiii!\r\n");
+  prints("\nh\biii!\r\n");
 
   while (1)
     __asm__ volatile("hlt");

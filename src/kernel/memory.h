@@ -1,5 +1,5 @@
-#ifndef ____HKOS_MEMORY_HEADER_DEFINED____
-#define ____HKOS_MEMORY_HEADER_DEFINED____
+#ifndef HKOS_MEMORY_H
+#define HKOS_MEMORY_H
 
 #include "ints.h"
 
@@ -11,4 +11,4 @@ int memcmp(const void *s1, const void *s2, isize n);
 
 isize strlen(const char *str);
 
-#endif
+#endif // HKOS_MEMORY_H

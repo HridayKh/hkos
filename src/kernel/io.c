@@ -1,38 +1,10 @@
 #include "ints.h"
 
-#include "vga.c"
-#define vaList __builtin_va_list
-#define vaStart __builtin_va_start
-#define vaArg __builtin_va_arg
-#define vaEnd __builtin_va_end
-#define vaCopy __builtin_va_copy
+#include "io.h"
+#include "vga.h"
 
 u8 cursorx = 0;
 u8 cursory = 0;
-
-static void push(u32 val) {
-  __asm__ volatile("push %0" : : "r"(val) : "memory");
-}
-static u32 pop(void) {
-  u32 val;
-  __asm__ volatile("pop %0" : "=r"(val) : : "memory");
-  return val;
-}
-
-static inline void outb(u16 port, u8 val) {
-  __asm__ volatile("{outb %b0, %w1 | out %w1, %b0}"
-                   :
-                   : "a"(val), "Nd"(port)
-                   : "memory");
-}
-static inline u8 inb(u16 port) {
-  u8 ret;
-  __asm__ volatile("{inb %w1, %b0 | in %b0, %w1}"
-                   : "=a"(ret)
-                   : "Nd"(port)
-                   : "memory");
-  return ret;
-}
 
 static void updateCursor(void) {
   u16 pos = cursory * VGA_WIDTH + cursorx;
@@ -42,7 +14,25 @@ static void updateCursor(void) {
   outb(0x3D4, 0x0E);
   outb(0x3D5, (u8)((pos >> 8) & 0xFF));
 }
-static void normalizeCursor(void) {
+
+// print a single ascii character but the cursor is NOT updated
+// returns if char was printed (char >= ' ')
+static void printcNoCursorUpdate(u8 charAscii) {
+  if (charAscii == '\b') {
+    if (cursorx > 0)
+      cursorx--;
+  } else if (charAscii == '\t') {
+    cursorx = (cursorx + 8) & ~7;
+  } else if (charAscii == '\r') {
+    cursorx = 0;
+  } else if (charAscii == '\n') {
+    cursory++;
+  } else if (charAscii >= ' ') { // printable chars
+    vgaPrintChar(cursorx, cursory, charAscii);
+    cursorx++;
+  }
+
+  // normalize cursor
   if (cursorx >= VGA_WIDTH) {
     cursorx = 0;
     cursory++;
@@ -51,32 +41,6 @@ static void normalizeCursor(void) {
   while (cursory >= VGA_HEIGHT) {
     vgaScroll();
     cursory--;
-  }
-}
-
-static void manageCursorForChar(u8 c) {
-  if (c == '\b') {
-    if (cursorx > 0)
-      cursorx--;
-  } else if (c == '\t') {
-    cursorx = (cursorx + 8) & ~7;
-  } else if (c == '\r') {
-    cursorx = 0;
-  } else if (c == '\n') {
-    cursory++;
-  }
-
-  normalizeCursor();
-}
-
-// print a single ascii character but the cursor is NOT updated
-// returns if char was printed (char >= ' ')
-static void printcNoCursorUpdate(u8 charAscii) {
-  manageCursorForChar(charAscii);
-  if (charAscii >= ' ') { // printable chars
-    vgaPrintChar(cursorx, cursory, charAscii);
-    cursorx++;
-    normalizeCursor();
   }
 }
 // print a string until null terminator  but the cursor is NOT updated

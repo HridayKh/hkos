@@ -1,5 +1,4 @@
 #include "memory.h"
-#include "ints.h"
 
 void *memcpy(void *dest, const void *src, isize n) {
   u8 *s = (u8 *)src;

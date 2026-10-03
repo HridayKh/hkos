@@ -1,6 +1,6 @@
 
-#ifndef ____HKOS_INTS_HEADER_DEFINED____ // check if this header defined
-#define ____HKOS_INTS_HEADER_DEFINED____ // mark as defined
+#ifndef HKOS_INTS_H // check if this header defined
+#define HKOS_INTS_H // mark as defined
 
 // unsigned ints
 typedef unsigned char u8;
@@ -23,4 +23,4 @@ typedef u32 iptr; // 32b addresses in protected mode
 typedef u32 isize;
 #endif
 
-#endif
+#endif // HKOS_INTS_H
